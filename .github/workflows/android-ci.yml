@@ -1,0 +1,62 @@
+name: Android CI
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+          cache: "gradle"
+
+      - name: Lint + Unit Tests + Unit Coverage
+        run: |
+          ./gradlew lint testDebugUnitTest createDebugUnitTestCoverageReport
+
+      - name: Upload unit test & coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-and-coverage
+          path: |
+            app/build/reports/
+            app/build/test-results/
+
+  instrumented-tests:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+          cache: "gradle"
+
+      - name: Run instrumentation tests on emulator
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: google_apis
+          arch: x86_64
+          script: ./gradlew connectedDebugAndroidTest createDebugAndroidTestCoverageReport
+
+      - name: Upload androidTest & coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: androidtest-and-coverage
+          path: |
+            app/build/reports/
+            app/build/outputs/androidTest-results/
+            app/build/test-results/
